@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>dwlr — Interactive Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ── Reset & Variables ─────────────────────────────────────────────────── */
+:root {
+  --bg: #07070f;
+  --surface: #0e0e1a;
+  --card: #13131f;
+  --card2: #161624;
+  --border: rgba(124,92,252,0.18);
+  --border2: rgba(255,255,255,0.07);
+  --purple: #7C5CFC;
+  --purple2: #1a0f3a;
+  --purple-dim: rgba(124,92,252,0.12);
+  --text: #f0eeff;
+  --muted: #5a5478;
+  --muted2: #3a3458;
+  --green: #22c55e;
+  --amber: #f59e0b;
+  --red: #ef4444;
+  --phone-w: 375px;
+  --phone-h: 720px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--text); font-family:'Syne',sans-serif; min-height:100vh; overflow-x:hidden; }
+
+/* ── Top Nav ───────────────────────────────────────────────────────────── */
+.top-nav {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:16px 40px;
+  border-bottom:1px solid var(--border);
+  background:rgba(7,7,15,0.95);
+  backdrop-filter:blur(10px);
+  position:sticky; top:0; z-index:100;
+}
+.nav-logo { font-size:22px; font-weight:800; color:var(--purple); letter-spacing:-0.5px; }
+.nav-tabs { display:flex; gap:4px; }
+.nav-tab {
+  padding:8px 20px; border-radius:8px; cursor:pointer;
+  font-size:13px; font-weight:600; color:var(--muted);
+  border:1px solid transparent; transition:all 0.15s;
+}
+.nav-tab:hover { color:var(--text); }
+.nav-tab.active { background:var(--purple-dim); border-color:var(--border); color:var(--text); }
+.nav-right { font-family:'DM Mono',monospace; font-size:11px; color:var(--muted); }
+
+/* ── Main layout ───────────────────────────────────────────────────────── */
+.view { display:none; }
+.view.active { display:block; }
+
+/* ── Resident Demo View ────────────────────────────────────────────────── */
+.demo-layout {
+  display:flex; align-items:flex-start; justify-content:center;
+  gap:48px; padding:40px;
+  min-height:calc(100vh - 65px);
+}
+
+/* Phone frame */
+.phone-wrap { position:relative; flex-shrink:0; }
+.phone-frame {
+  width:var(--phone-w);
+  height:var(--phone-h);
+  background:#0a0a14;
+  border-radius:44px;
+  border:2px solid rgba(124,92,252,0.3);
+  box-shadow: 0 0 0 8px #0e0e1a, 0 0 0 9px rgba(124,92,252,0.1), 0 32px 80px rgba(0,0,0,0.6);
+  overflow:hidden;
+  position:relative;
+}
+
+/* Phone notch */
+.phone-notch {
+  position:absolute; top:0; left:50%; transform:translateX(-50%);
+  width:120px; height:28px;
+  background:#0a0a14;
+  border-radius:0 0 18px 18px;
+  z-index:10;
+  border-bottom:1px solid rgba(124,92,252,0.1);
+}
+
+.phone-status {
+  position:absolute; top:0; left:0; right:0; height:44px;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 20px; z-index:9;
+  font-family:'DM Mono',monospace; font-size:11px; color:rgba(255,255,255,0.5);
+}
+
+/* Screens container */
+.screens { position:absolute; top:0; left:0; right:0; bottom:0; overflow:hidden; }
+.screen {
+  position:absolute; top:0; left:0; right:0; bottom:0;
+  overflow-y:auto; overflow-x:hidden;
+  display:none;
+  background:#0a0a0a;
+  padding:52px 0 0;
+  scrollbar-width:none;
+}
+.screen::-webkit-scrollbar { display:none; }
+.screen.active { display:block; }
+.screen-inner { padding:16px 20px 80px; }
+
+/* Tab bar */
+.tab-bar {
+  position:absolute; bottom:0; left:0; right:0; height:64px;
+  background:#0f0f1f;
+  border-top:1px solid rgba(124,92,252,0.15);
+  display:flex; z-index:10;
+}
+.tab-btn {
+  flex:1; display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  cursor:pointer; gap:2px;
+  font-size:11px; font-weight:600; color:#475569;
+  transition:color 0.15s;
+}
+.tab-btn.active { color:var(--purple); }
+
+/* Side panel */
+.side-panel {
+  width:340px; flex-shrink:0;
+  display:flex; flex-direction:column; gap:16px;
+  padding-top:8px;
+}
+
+.info-card {
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:20px;
+  position:relative; overflow:hidden;
+}
+
+.info-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background:linear-gradient(90deg, var(--purple), transparent);
+}
+
+.info-card-label {
+  font-family:'DM Mono',monospace; font-size:9px;
+  color:var(--muted); letter-spacing:2px; text-transform:uppercase;
+  margin-bottom:10px;
+}
+
+.info-card-title { font-size:16px; font-weight:700; color:var(--text); margin-bottom:6px; }
+.info-card-body { font-size:13px; color:var(--muted); line-height:1.6; }
+
+.step-indicators { display:flex; gap:6px; flex-wrap:wrap; }
+.step-pill {
+  font-family:'DM Mono',monospace; font-size:9px;
+  padding:4px 10px; border-radius:20px;
+  border:1px solid var(--border2); color:var(--muted);
+  cursor:pointer; transition:all 0.15s;
+}
+.step-pill.active { background:var(--purple-dim); border-color:var(--border); color:var(--text); }
+.step-pill.done { background:rgba(34,197,94,0.1); border-color:rgba(34,197,94,0.2); color:var(--green); }
+
+.nav-arrows { display:flex; gap:10px; margin-top:4px; }
+.arrow-btn {
+  flex:1; padding:12px; border-radius:10px;
+  border:1px solid var(--border); background:var(--card2);
+  color:var(--text); font-family:'Syne',sans-serif;
+  font-size:13px; font-weight:600; cursor:pointer;
+  transition:all 0.15s;
+}
+.arrow-btn:hover { background:var(--purple-dim); border-color:var(--border); }
+.arrow-btn.primary { background:var(--purple); border-color:var(--purple); }
+.arrow-btn.primary:hover { background:#6b4ee0; }
+.arrow-btn:disabled { opacity:0.3; cursor:not-allowed; }
+
+/* ── Screen styles ─────────────────────────────────────────────────────── */
+.s-logo { font-size:13px; font-weight:800; color:var(--purple); letter-spacing:3px; text-align:center; margin-bottom:16px; }
+.s-heading { font-size:24px; font-weight:700; color:#fff; text-align:center; margin-bottom:8px; line-height:1.2; }
+.s-sub { font-size:13px; color:#475569; text-align:center; line-height:1.6; margin-bottom:24px; }
+.s-label { font-size:10px; font-weight:700; color:var(--purple); letter-spacing:1.5px; text-transform:uppercase; margin-bottom:10px; }
+.s-hint { font-size:12px; color:#475569; margin-bottom:12px; }
+
+.s-btn {
+  width:100%; padding:15px; border-radius:12px;
+  background:var(--purple); border:none;
+  color:#fff; font-family:'Syne',sans-serif;
+  font-size:15px; font-weight:700; cursor:pointer;
+  transition:all 0.15s; margin-top:8px;
+}
+.s-btn:hover { background:#6b4ee0; }
+.s-btn.outline {
+  background:transparent; border:1px solid rgba(124,92,252,0.3);
+  color:#475569; margin-top:4px; font-size:13px;
+}
+
+.s-input {
+  width:100%; padding:14px 16px;
+  background:#161616; border:1px solid #2a2a2a;
+  border-radius:12px; color:#fff;
+  font-family:'Syne',sans-serif; font-size:14px;
+  margin-bottom:10px; outline:none;
+}
+
+.s-card {
+  background:#161616; border-radius:12px;
+  padding:14px 16px; margin-bottom:10px;
+  border:1px solid #2a2a2a;
+}
+
+.s-card.selected { background:#1a0f3a; border-color:var(--purple); }
+
+.s-toggle-row {
+  display:flex; align-items:center; justify-content:space-between;
+  background:#161616; border-radius:12px; padding:14px 16px;
+  margin-bottom:10px; border:1px solid #2a2a2a;
+}
+
+.s-toggle {
+  width:44px; height:24px; border-radius:12px;
+  background:var(--purple); position:relative; cursor:pointer; flex-shrink:0;
+}
+.s-toggle::after {
+  content:''; position:absolute;
+  top:3px; right:3px;
+  width:18px; height:18px; border-radius:9px;
+  background:#fff; transition:right 0.2s;
+}
+.s-toggle.off { background:#334155; }
+.s-toggle.off::after { right:auto; left:3px; }
+
+.s-tag-grid { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+.s-tag {
+  padding:8px 14px; border-radius:20px;
+  border:1px solid #2a2a2a; background:#161616;
+  font-size:13px; color:#475569; cursor:pointer;
+  transition:all 0.15s;
+}
+.s-tag.on { background:#1a0f3a; border-color:var(--purple); color:#fff; font-weight:600; }
+
+.s-info-box {
+  background:#161616; border-radius:12px; padding:16px;
+  border-left:3px solid var(--purple); margin-bottom:16px;
+}
+.s-info-box-title { font-size:12px; font-weight:700; color:var(--purple); margin-bottom:6px; }
+.s-info-box-body { font-size:12px; color:#64748b; line-height:1.6; }
+
+/* Home screen specific */
+.home-event {
+  display:flex; align-items:center; justify-content:space-between;
+  background:#161616; border-radius:12px; padding:14px 16px; margin-bottom:10px;
+}
+.home-event-title { font-size:14px; font-weight:600; color:#fff; margin-bottom:2px; }
+.home-event-meta { font-size:11px; color:#475569; }
+.rsvp-btn {
+  background:var(--purple); color:#fff; border:none;
+  padding:7px 14px; border-radius:8px;
+  font-family:'Syne',sans-serif; font-size:11px; font-weight:700;
+  cursor:pointer; flex-shrink:0;
+}
+
+.cohort-row { display:flex; gap:10px; margin-bottom:16px; }
+.cohort-card {
+  flex:1; background:#161616; border-radius:12px;
+  padding:12px 8px; text-align:center;
+}
+.cohort-avatar {
+  width:40px; height:40px; border-radius:20px;
+  background:var(--purple); margin:0 auto 6px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:16px; font-weight:700; color:#fff;
+}
+.cohort-name { font-size:12px; font-weight:600; color:#fff; }
+.cohort-vibe { font-size:10px; color:#475569; }
+
+/* Nudge items */
+.nudge-item {
+  background:#161616; border-radius:12px; padding:14px 16px;
+  margin-bottom:10px; border:1px solid #2a2a2a;
+  border-left:3px solid var(--purple);
+}
+.nudge-type { font-family:'DM Mono',monospace; font-size:9px; color:var(--purple); letter-spacing:1px; margin-bottom:4px; }
+.nudge-title { font-size:13px; font-weight:600; color:#fff; margin-bottom:3px; }
+.nudge-msg { font-size:12px; color:#475569; line-height:1.5; }
+
+/* Vibe score */
+.score-circle {
+  width:130px; height:130px; border-radius:65px;
+  background:#1a0f3a; border:3px solid var(--purple);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  margin:0 auto 12px;
+}
+.score-num { font-size:48px; font-weight:800; color:var(--purple); line-height:1; }
+.score-lbl { font-family:'DM Mono',monospace; font-size:9px; color:#475569; letter-spacing:1px; }
+.score-badge { display:inline-flex; align-items:center; gap:4px; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.2); border-radius:8px; padding:4px 10px; font-size:11px; font-weight:700; color:var(--green); }
+
+.badge-row { display:flex; flex-direction:column; gap:8px; margin-bottom:16px; }
+.badge-item {
+  display:flex; align-items:center; gap:12px;
+  background:#161616; border-radius:10px; padding:12px 14px;
+  border:1px solid #2a2a2a;
+}
+.badge-pts {
+  width:36px; height:36px; border-radius:10px;
+  background:#1a0f3a; border:1px solid var(--purple);
+  display:flex; align-items:center; justify-content:center;
+  font-size:10px; font-weight:700; color:var(--purple);
+  flex-shrink:0;
+}
+.badge-title { font-size:13px; font-weight:600; color:#fff; margin-bottom:1px; }
+.badge-desc { font-size:11px; color:#475569; }
+
+/* Profile/members */
+.member-item {
+  display:flex; align-items:center; gap:12px;
+  background:#161616; border-radius:12px; padding:12px 14px; margin-bottom:8px;
+  border:1px solid #2a2a2a;
+}
+.member-avatar {
+  width:40px; height:40px; border-radius:20px;
+  background:var(--purple); display:flex; align-items:center; justify-content:center;
+  font-size:16px; font-weight:700; color:#fff; flex-shrink:0;
+}
+.member-name { font-size:14px; font-weight:600; color:#fff; margin-bottom:1px; }
+.member-meta { font-size:11px; color:#475569; }
+.member-badge { margin-left:auto; font-family:'DM Mono',monospace; font-size:9px; padding:3px 8px; border-radius:6px; background:var(--purple-dim); color:var(--purple); flex-shrink:0; }
+
+/* Events tab */
+.event-item {
+  display:flex; gap:12px; align-items:center;
+  background:#161616; border-radius:12px; padding:14px; margin-bottom:10px;
+}
+.event-date { text-align:center; width:36px; flex-shrink:0; }
+.event-date-day { font-size:20px; font-weight:800; color:#fff; line-height:1; }
+.event-date-mo { font-family:'DM Mono',monospace; font-size:9px; color:var(--purple); text-transform:uppercase; }
+.event-item-title { font-size:13px; font-weight:600; color:#fff; margin-bottom:2px; }
+.event-item-meta { font-size:11px; color:#475569; }
+.event-count { margin-left:auto; text-align:center; flex-shrink:0; }
+.event-count-num { font-size:18px; font-weight:700; color:var(--purple); }
+.event-count-lbl { font-family:'DM Mono',monospace; font-size:8px; color:#475569; }
+
+/* Login specific */
+.login-tab-row { display:flex; background:#161616; border-radius:10px; padding:4px; margin-bottom:20px; }
+.login-tab { flex:1; padding:9px; border-radius:7px; text-align:center; font-size:13px; font-weight:600; color:#475569; cursor:pointer; }
+.login-tab.active { background:var(--purple); color:#fff; }
+
+/* ── Operator Dashboard View ───────────────────────────────────────────── */
+.dash-layout { display:flex; min-height:calc(100vh - 65px); }
+.dash-sidebar {
+  width:220px; background:var(--surface);
+  border-right:1px solid var(--border);
+  padding:28px 0; flex-shrink:0;
+  display:flex; flex-direction:column;
+}
+.dash-sidebar-logo { padding:0 24px 24px; border-bottom:1px solid var(--border); margin-bottom:16px; }
+.dash-logo { font-size:22px; font-weight:800; color:var(--purple); }
+.dash-logo-sub { font-family:'DM Mono',monospace; font-size:9px; color:var(--muted); letter-spacing:1.5px; text-transform:uppercase; }
+.dash-nav { padding:0 12px; }
+.dash-nav-item {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 12px; border-radius:10px;
+  cursor:pointer; font-size:14px; font-weight:500;
+  color:var(--muted); border:1px solid transparent;
+  transition:all 0.15s; margin-bottom:2px;
+}
+.dash-nav-item:hover { background:var(--purple-dim); color:var(--text); }
+.dash-nav-item.active { background:var(--purple-dim); border-color:var(--border); color:var(--text); }
+.dash-dot { width:6px; height:6px; border-radius:3px; background:var(--muted2); flex-shrink:0; }
+.dash-nav-item.active .dash-dot { background:var(--purple); }
+.dash-sidebar-footer { margin-top:auto; padding:20px 24px 0; border-top:1px solid var(--border); }
+.property-card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:12px; }
+.property-name { font-size:13px; font-weight:600; color:var(--text); margin-bottom:2px; }
+.property-meta { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); }
+
+.dash-main { flex:1; padding:32px 36px; overflow-y:auto; }
+.dash-topbar { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:28px; }
+.dash-title { font-size:24px; font-weight:700; color:var(--text); letter-spacing:-0.5px; }
+.dash-sub { font-family:'DM Mono',monospace; font-size:11px; color:var(--muted); margin-top:2px; }
+.dash-export { background:var(--purple); color:#fff; border:none; border-radius:8px; padding:9px 18px; font-family:'Syne',sans-serif; font-size:13px; font-weight:600; cursor:pointer; }
+.dash-export:hover { background:#6b4ee0; }
+
+.stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px; }
+.stat-card {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:14px; padding:18px; position:relative; overflow:hidden;
+}
+.stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--purple),transparent); }
+.stat-lbl { font-family:'DM Mono',monospace; font-size:9px; color:var(--muted); letter-spacing:1.5px; text-transform:uppercase; margin-bottom:8px; }
+.stat-val { font-size:30px; font-weight:800; color:var(--text); letter-spacing:-1px; margin-bottom:4px; }
+.stat-val.purple { color:var(--purple); }
+.stat-val.green { color:var(--green); }
+.stat-val.amber { color:var(--amber); }
+.stat-delta { font-family:'DM Mono',monospace; font-size:10px; }
+.up { color:var(--green); } .down { color:var(--red); } .neutral { color:var(--muted); }
+
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px; }
+.panel { background:var(--card); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+.panel-hdr { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--border2); }
+.panel-title { font-size:14px; font-weight:700; }
+.panel-badge { font-family:'DM Mono',monospace; font-size:9px; color:var(--purple); background:var(--purple-dim); border:1px solid var(--border); border-radius:6px; padding:3px 8px; }
+.panel-body { padding:16px 20px; }
+
+.eng-row { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+.eng-label { font-size:12px; color:var(--text); width:120px; flex-shrink:0; }
+.eng-bar-wrap { flex:1; height:5px; background:var(--muted2); border-radius:3px; overflow:hidden; }
+.eng-bar { height:100%; border-radius:3px; background:var(--purple); }
+.eng-pct { font-family:'DM Mono',monospace; font-size:11px; color:var(--muted); width:32px; text-align:right; }
+
+.activity-item { display:flex; align-items:flex-start; gap:10px; padding:11px 0; border-bottom:1px solid var(--border2); }
+.activity-item:last-child { border-bottom:none; }
+.a-dot { width:7px; height:7px; border-radius:50%; background:var(--purple); margin-top:4px; flex-shrink:0; }
+.a-dot.green { background:var(--green); }
+.a-dot.amber { background:var(--amber); }
+.a-text { font-size:12px; color:var(--text); flex:1; line-height:1.5; }
+.a-time { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); flex-shrink:0; }
+
+.roi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:0; }
+.roi-item { text-align:center; padding:24px 16px; border-right:1px solid var(--border2); }
+.roi-item:last-child { border-right:none; }
+.roi-val { font-size:32px; font-weight:800; letter-spacing:-1px; margin-bottom:4px; }
+.roi-lbl { font-family:'DM Mono',monospace; font-size:9px; color:var(--muted); letter-spacing:1.5px; text-transform:uppercase; }
+
+/* Resident table */
+.res-table { width:100%; border-collapse:collapse; }
+.res-table th { font-family:'DM Mono',monospace; font-size:9px; color:var(--muted); letter-spacing:1.5px; text-transform:uppercase; padding:10px 16px; text-align:left; border-bottom:1px solid var(--border2); background:var(--surface); }
+.res-table td { padding:13px 16px; border-bottom:1px solid var(--border2); font-size:12px; }
+.res-table tr:last-child td { border-bottom:none; }
+.res-table tr:hover td { background:rgba(124,92,252,0.04); }
+.res-name { font-weight:600; color:var(--text); }
+.res-unit { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); }
+.pill { display:inline-flex; align-items:center; gap:4px; border-radius:20px; padding:3px 9px; font-family:'DM Mono',monospace; font-size:9px; font-weight:600; letter-spacing:0.5px; }
+.pill-green { background:rgba(34,197,94,0.1); color:var(--green); }
+.pill-amber { background:rgba(245,158,11,0.1); color:var(--amber); }
+.pill-red { background:rgba(239,68,68,0.1); color:var(--red); }
+.pill-purple { background:var(--purple-dim); color:var(--purple); }
+.score-mini-wrap { width:64px; height:4px; background:var(--muted2); border-radius:2px; display:inline-block; vertical-align:middle; margin-right:5px; overflow:hidden; }
+.score-mini { height:100%; border-radius:2px; background:var(--purple); }
+
+/* Churn cards */
+.risk-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:12px; display:flex; align-items:center; gap:14px; }
+.risk-icon-box { width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:18px; }
+.risk-high { background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); }
+.risk-medium { background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.2); }
+.risk-name { font-size:14px; font-weight:600; color:var(--text); margin-bottom:2px; }
+.risk-reason { font-size:11px; color:var(--muted); margin-bottom:6px; }
+.risk-signals { display:flex; gap:5px; flex-wrap:wrap; }
+.sig { font-family:'DM Mono',monospace; font-size:9px; border-radius:4px; padding:2px 6px; }
+.sig-red { background:rgba(239,68,68,0.1); color:var(--red); }
+.sig-amber { background:rgba(245,158,11,0.1); color:var(--amber); }
+.risk-pct { font-size:22px; font-weight:800; color:var(--red); letter-spacing:-0.5px; text-align:center; flex-shrink:0; }
+.risk-pct.amber { color:var(--amber); }
+.risk-pct-lbl { font-family:'DM Mono',monospace; font-size:9px; color:var(--muted); letter-spacing:1px; }
+
+/* Events dashboard */
+.ev-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 18px; margin-bottom:10px; display:flex; align-items:center; gap:14px; }
+.ev-date { width:44px; height:48px; background:var(--purple-dim); border:1px solid var(--border); border-radius:8px; display:flex; flex-direction:column; align-items:center; justify-content:center; flex-shrink:0; }
+.ev-mo { font-family:'DM Mono',monospace; font-size:8px; color:var(--purple); letter-spacing:1px; text-transform:uppercase; }
+.ev-day { font-size:18px; font-weight:800; color:var(--text); line-height:1; }
+.ev-name { font-size:13px; font-weight:600; color:var(--text); margin-bottom:2px; }
+.ev-meta { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); }
+.ev-stats { display:flex; gap:14px; margin-left:auto; flex-shrink:0; }
+.ev-stat-val { font-size:16px; font-weight:700; color:var(--text); text-align:center; }
+.ev-stat-lbl { font-family:'DM Mono',monospace; font-size:8px; color:var(--muted); letter-spacing:1px; text-align:center; }
+
+.search-bar { display:flex; gap:10px; margin-bottom:18px; }
+.search-input { flex:1; background:var(--card); border:1px solid var(--border2); border-radius:10px; padding:9px 14px; color:var(--text); font-family:'Syne',sans-serif; font-size:13px; outline:none; }
+.search-input:focus { border-color:var(--purple); }
+.search-input::placeholder { color:var(--muted); }
+.filter-btn { background:var(--card); border:1px solid var(--border2); border-radius:10px; padding:9px 14px; color:var(--muted); font-family:'Syne',sans-serif; font-size:12px; cursor:pointer; }
+.filter-btn:hover { border-color:var(--border); color:var(--text); }
+
+.sec-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.sec-title { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; }
+.sec-action { font-family:'DM Mono',monospace; font-size:10px; color:var(--purple); cursor:pointer; }
+
+.dash-tab-panel { display:none; }
+.dash-tab-panel.active { display:block; }
+
+/* Alert bar */
+.alert-bar { background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.2); border-radius:10px; padding:12px 16px; margin-bottom:20px; display:flex; align-items:center; gap:10px; font-size:12px; color:var(--text); }
+</style>
+</head>
+<body>
+
+<!-- Top Nav -->
+<nav class="top-nav">
+  <div class="nav-logo">dwlr</div>
+  <div class="nav-tabs">
+    <div class="nav-tab active" onclick="switchView('resident', this)">Resident Experience</div>
+    <div class="nav-tab" onclick="switchView('operator', this)">Operator Dashboard</div>
+  </div>
+  <div class="nav-right">INVESTOR DEMO · MARCH 2026</div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- RESIDENT VIEW -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="view active" id="view-resident">
+  <div class="demo-layout">
+
+    <!-- Phone -->
+    <div class="phone-wrap">
+      <div class="phone-frame">
+        <div class="phone-notch"></div>
+        <div class="phone-status">
+          <span>9:41</span>
+          <span>●●●</span>
+        </div>
+        <div class="screens" id="screens">
+
+          <!-- LOGIN -->
+          <div class="screen active" id="screen-login">
+            <div class="screen-inner">
+              <div style="padding-top:40px">
+                <div style="font-size:48px;font-weight:800;color:var(--purple);margin-bottom:8px">dwlr</div>
+                <div style="font-size:15px;color:#475569;margin-bottom:40px">your building, your people</div>
+                <div class="login-tab-row">
+                  <div class="login-tab active">Magic link</div>
+                  <div class="login-tab">Password</div>
+                </div>
+                <input class="s-input" placeholder="your@email.com" value="alex@theroost.com" readonly />
+                <button class="s-btn" onclick="goNext()">Send magic link</button>
+                <div style="font-size:11px;color:#334155;text-align:center;margin-top:16px;line-height:1.6">By continuing you agree to dwlr's Terms of Service and Privacy Policy.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CONSENT -->
+          <div class="screen" id="screen-consent">
+            <div class="screen-inner">
+              <div class="s-logo">dwlr</div>
+              <div class="s-heading">Your data,<br>your control</div>
+              <div class="s-sub">Before we get started, here is exactly what we collect and why.</div>
+              <div class="s-label">WHAT WE COLLECT</div>
+              <div class="s-card">
+                <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:2px">Profile and Preferences</div>
+                <div style="font-size:11px;color:#475569">Your interests, availability, and vibe settings to match you with the right people.</div>
+              </div>
+              <div class="s-card">
+                <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:2px">Activity and Engagement</div>
+                <div style="font-size:11px;color:#475569">RSVPs, pledges, and participation to personalize your feed.</div>
+              </div>
+              <div class="s-card">
+                <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:2px">Property Context</div>
+                <div style="font-size:11px;color:#475569">Your building and unit info to connect you with neighbors.</div>
+              </div>
+              <div class="s-label" style="margin-top:16px">YOUR CONTROLS</div>
+              <div class="s-toggle-row">
+                <div>
+                  <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:2px">Usage Analytics</div>
+                  <div style="font-size:11px;color:#475569">Helps us improve the app.</div>
+                </div>
+                <div class="s-toggle"></div>
+              </div>
+              <div class="s-toggle-row">
+                <div>
+                  <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:2px">Personalized Suggestions</div>
+                  <div style="font-size:11px;color:#475569">Tailors recommendations to your vibe.</div>
+                </div>
+                <div class="s-toggle"></div>
+              </div>
+              <div class="s-label" style="margin-top:16px">WHAT WE NEVER DO</div>
+              <div style="font-size:12px;color:#475569;margin-bottom:4px">[ X ]  Sell your data to third parties</div>
+              <div style="font-size:12px;color:#475569;margin-bottom:4px">[ X ]  Share your info outside your property</div>
+              <div style="font-size:12px;color:#475569;margin-bottom:20px">[ X ]  Use your data for advertising</div>
+              <button class="s-btn" onclick="goNext()">I understand, let us go</button>
+            </div>
+          </div>
+
+          <!-- PLEDGE -->
+          <div class="screen" id="screen-pledge">
+            <div class="screen-inner">
+              <div class="s-logo">dwlr</div>
+              <div class="s-heading">before you meet<br>your neighbors</div>
+              <div class="s-sub">just a few things we are all agreed on here</div>
+              <div class="s-card" style="margin-bottom:10px">
+                <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:2px">I will be myself</div>
+                <div style="font-size:12px;color:#475569">real name, real energy, no fake vibes</div>
+              </div>
+              <div class="s-card" style="margin-bottom:10px">
+                <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:2px">I will respect my neighbors</div>
+                <div style="font-size:12px;color:#475569">their space, their privacy, their boundaries</div>
+              </div>
+              <div class="s-card" style="margin-bottom:10px">
+                <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:2px">I will show up</div>
+                <div style="font-size:12px;color:#475569">or cancel in advance if plans change</div>
+              </div>
+              <div class="s-card" style="margin-bottom:10px">
+                <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:2px">I will not hate</div>
+                <div style="font-size:12px;color:#475569">zero tolerance, no exceptions</div>
+              </div>
+              <div class="s-card" style="margin-bottom:20px">
+                <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:2px">I will flag it, not fight it</div>
+                <div style="font-size:12px;color:#475569">if something is off, I will use the report button</div>
+              </div>
+              <button class="s-btn" onclick="goNext()">I am in — let us go</button>
+              <div style="font-size:11px;color:#334155;text-align:center;margin-top:10px">By continuing you agree to dwlr's community guidelines.</div>
+            </div>
+          </div>
+
+          <!-- VIBE -->
+          <div class="screen" id="screen-vibe">
+            <div class="screen-inner">
+              <div class="s-logo">dwlr</div>
+              <div class="s-heading">What is your vibe?</div>
+              <div class="s-sub">This shapes everything — your cohort, your events, your nudges.</div>
+              <div class="s-label">YOUR ENERGY TYPE</div>
+              <div class="s-card selected" style="margin-bottom:8px;position:relative">
+                <div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:2px">Extrovert</div>
+                <div style="font-size:12px;color:var(--purple)">I recharge by being around people</div>
+                <div style="position:absolute;top:14px;right:14px;width:10px;height:10px;border-radius:5px;background:var(--purple)"></div>
+              </div>
+              <div class="s-card" style="margin-bottom:8px">
+                <div style="font-size:15px;font-weight:700;color:#475569;margin-bottom:2px">Introvert</div>
+                <div style="font-size:12px;color:#334155">I recharge with solo time</div>
+              </div>
+              <div class="s-card" style="margin-bottom:16px">
+                <div style="font-size:15px;font-weight:700;color:#475569;margin-bottom:2px">Ambivert</div>
+                <div style="font-size:12px;color:#334155">Depends on the day honestly</div>
+              </div>
+              <div class="s-label">YOUR INTERESTS</div>
+              <div class="s-hint">Pick everything that fits. No wrong answers.</div>
+              <div class="s-tag-grid">
+                <div class="s-tag on">Music</div>
+                <div class="s-tag">Gaming</div>
+                <div class="s-tag on">Foodie</div>
+                <div class="s-tag">Outdoors</div>
+                <div class="s-tag">Creative</div>
+                <div class="s-tag">Study</div>
+                <div class="s-tag on">Fitness</div>
+                <div class="s-tag on">Night Owl</div>
+              </div>
+              <div class="s-info-box">
+                <div class="s-info-box-title">WHAT THIS UNLOCKS</div>
+                <div class="s-info-box-body">— Events matched to your interests<br>— Neighbors who share your vibe<br>— Nudges tuned to your energy type</div>
+              </div>
+              <button class="s-btn" onclick="goNext()">Build my profile</button>
+            </div>
+          </div>
+
+          <!-- PROFILE PREVIEW -->
+          <div class="screen" id="screen-profile">
+            <div class="screen-inner">
+              <div class="s-logo">dwlr</div>
+              <div style="text-align:center;margin-bottom:24px">
+                <div style="width:72px;height:72px;border-radius:36px;background:var(--purple);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-size:28px;font-weight:700;color:#fff;position:relative">
+                  A
+                  <div style="position:absolute;bottom:-4px;right:-8px;background:var(--green);border-radius:8px;padding:2px 7px;font-size:9px;font-weight:700;color:#fff">Extrovert</div>
+                </div>
+                <div style="font-size:22px;font-weight:700;color:#fff;margin-top:12px">Alex</div>
+                <div style="font-size:12px;color:#475569">The Roost Seattle</div>
+              </div>
+              <div class="s-label">YOUR VIBE</div>
+              <div class="s-hint">These shape which events and neighbors we surface for you.</div>
+              <div class="s-tag-grid" style="margin-bottom:20px">
+                <div class="s-tag on">Music</div>
+                <div class="s-tag on">Foodie</div>
+                <div class="s-tag on">Fitness</div>
+                <div class="s-tag on">Night Owl</div>
+                <div class="s-tag">Gaming</div>
+                <div class="s-tag">Outdoors</div>
+                <div class="s-tag">Creative</div>
+                <div class="s-tag">Study</div>
+              </div>
+              <div class="s-label">WHEN YOU ARE AROUND</div>
+              <div class="s-tag-grid" style="margin-bottom:20px">
+                <div class="s-tag on">Weekday evenings</div>
+                <div class="s-tag on">Saturday afternoons</div>
+                <div class="s-tag on">Late nights</div>
+                <div class="s-tag">Sunday brunch</div>
+                <div class="s-tag">Early mornings</div>
+              </div>
+              <div class="s-info-box">
+                <div class="s-info-box-title">WHY THIS MATTERS</div>
+                <div class="s-info-box-body">dwlr uses your vibe and availability to build your personal cohort, surface events you will actually show up to, and send nudges at the right moment.</div>
+              </div>
+              <button class="s-btn" onclick="goNext()">See my home screen</button>
+            </div>
+          </div>
+
+          <!-- VIBE SCORE -->
+          <div class="screen" id="screen-vibescore">
+            <div class="screen-inner">
+              <div class="s-logo">dwlr</div>
+              <div style="font-size:20px;font-weight:700;color:#fff;text-align:center;margin-bottom:6px">Your Vibe Score</div>
+              <div style="font-size:13px;color:#475569;text-align:center;margin-bottom:24px">You have already earned points just by showing up.</div>
+              <div class="score-circle">
+                <div class="score-num">50</div>
+                <div class="score-lbl">VIBE POINTS</div>
+              </div>
+              <div style="text-align:center;margin-bottom:24px">
+                <div class="score-badge">LEVEL 1 — NEW RESIDENT</div>
+              </div>
+              <div class="s-label">HOW YOU EARNED IT</div>
+              <div class="badge-row">
+                <div class="badge-item">
+                  <div class="badge-pts">+10</div>
+                  <div><div class="badge-title">Pledge Taken</div><div class="badge-desc">You committed to the community</div></div>
+                </div>
+                <div class="badge-item">
+                  <div class="badge-pts">+15</div>
+                  <div><div class="badge-title">Vibe Set</div><div class="badge-desc">Your profile is ready to match</div></div>
+                </div>
+                <div class="badge-item">
+                  <div class="badge-pts">+25</div>
+                  <div><div class="badge-title">Early Adopter</div><div class="badge-desc">One of the first in your building</div></div>
+                </div>
+              </div>
+              <div class="s-info-box" style="margin-top:8px">
+                <div class="s-info-box-title">WHY IT MATTERS</div>
+                <div class="s-info-box-body">Residents with higher Vibe Scores are 3x more likely to renew. Operators see score trends in the dashboard — it is the earliest signal of churn risk.</div>
+              </div>
+              <button class="s-btn" onclick="goHome()">Take me to my home screen</button>
+            </div>
+          </div>
+
+          <!-- HOME (with tab bar) -->
+          <div class="screen" id="screen-home" style="padding-bottom:0">
+            <div id="home-tabs">
+
+              <!-- Home tab content -->
+              <div id="htab-home" style="display:block;padding:16px 20px 80px">
+                <div style="font-size:24px;font-weight:800;color:var(--purple);margin-bottom:4px">dwlr</div>
+                <div style="font-size:22px;font-weight:700;color:#fff;margin-bottom:2px">Good morning, Alex</div>
+                <div style="font-size:12px;color:#475569;margin-bottom:24px">The Roost Seattle</div>
+                <div class="s-label">TODAY IN YOUR BUILDING</div>
+                <div class="home-event">
+                  <div>
+                    <div class="home-event-title">Rooftop Hangout</div>
+                    <div class="home-event-meta">7:00 PM · 8 going</div>
+                  </div>
+                  <button class="rsvp-btn">RSVP</button>
+                </div>
+                <div class="home-event">
+                  <div>
+                    <div class="home-event-title">Study Session @ Lobby</div>
+                    <div class="home-event-meta">4:00 PM · 5 going</div>
+                  </div>
+                  <button class="rsvp-btn">RSVP</button>
+                </div>
+                <div class="home-event">
+                  <div>
+                    <div class="home-event-title">Sunday Brunch Run</div>
+                    <div class="home-event-meta">10:00 AM · 12 going</div>
+                  </div>
+                  <button class="rsvp-btn">RSVP</button>
+                </div>
+                <div class="s-label" style="margin-top:16px">YOUR COHORT</div>
+                <div class="cohort-row">
+                  <div class="cohort-card">
+                    <div class="cohort-avatar">A</div>
+                    <div class="cohort-name">Alex</div>
+                    <div class="cohort-vibe">Foodie</div>
+                  </div>
+                  <div class="cohort-card">
+                    <div class="cohort-avatar" style="background:#3b82f6">J</div>
+                    <div class="cohort-name">Jordan</div>
+                    <div class="cohort-vibe">Gaming</div>
+                  </div>
+                  <div class="cohort-card">
+                    <div class="cohort-avatar" style="background:#22c55e">S</div>
+                    <div class="cohort-name">Sam</div>
+                    <div class="cohort-vibe">Fitness</div>
+                  </div>
+                </div>
+                <div style="display:flex;gap:10px;margin-top:8px">
+                  <button class="s-btn" style="margin-top:0;font-size:13px">Browse Events</button>
+                  <button class="s-btn" style="margin-top:0;background:transparent;border:1px solid var(--purple);color:var(--purple);font-size:13px">View Members</button>
+                </div>
+              </div>
+
+              <!-- Events tab content -->
+              <div id="htab-events" style="display:none;padding:16px 20px 80px">
+                <div style="font-size:20px;font-weight:700;color:#fff;margin-bottom:4px">Events</div>
+                <div style="font-size:12px;color:#475569;margin-bottom:20px">Sorted by your vibe</div>
+                <div class="event-item">
+                  <div class="event-date"><div class="event-date-day">24</div><div class="event-date-mo">MAR</div></div>
+                  <div><div class="event-item-title">Rooftop Hangout</div><div class="event-item-meta">7:00 PM · Rooftop Deck</div></div>
+                  <div class="event-count"><div class="event-count-num">12</div><div class="event-count-lbl">GOING</div></div>
+                </div>
+                <div class="event-item">
+                  <div class="event-date"><div class="event-date-day">26</div><div class="event-date-mo">MAR</div></div>
+                  <div><div class="event-item-title">Study Session @ Lobby</div><div class="event-item-meta">4:00 PM · Common Room</div></div>
+                  <div class="event-count"><div class="event-count-num">7</div><div class="event-count-lbl">GOING</div></div>
+                </div>
+                <div class="event-item">
+                  <div class="event-date"><div class="event-date-day">30</div><div class="event-date-mo">MAR</div></div>
+                  <div><div class="event-item-title">Sunday Brunch Run</div><div class="event-item-meta">10:00 AM · Meet at Lobby</div></div>
+                  <div class="event-count"><div class="event-count-num">15</div><div class="event-count-lbl">GOING</div></div>
+                </div>
+                <div class="event-item">
+                  <div class="event-date"><div class="event-date-day">2</div><div class="event-date-mo">APR</div></div>
+                  <div><div class="event-item-title">Music Listening Party</div><div class="event-item-meta">8:00 PM · Unit 3B</div></div>
+                  <div class="event-count"><div class="event-count-num">6</div><div class="event-count-lbl">GOING</div></div>
+                </div>
+              </div>
+
+              <!-- Nudges tab content -->
+              <div id="htab-nudges" style="display:none;padding:16px 20px 80px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                  <div style="font-size:20px;font-weight:700;color:#fff">Nudges</div>
+                  <div style="font-size:12px;color:var(--purple);cursor:pointer">Mark all read</div>
+                </div>
+                <div style="font-size:12px;color:var(--purple);margin-bottom:20px">2 unread</div>
+                <div class="nudge-item">
+                  <div class="nudge-type">EVENT · 30m ago</div>
+                  <div class="nudge-title">Rooftop hangout tonight</div>
+                  <div class="nudge-msg">3 of your neighbors are going to the rooftop social at 7pm. Want to join?</div>
+                </div>
+                <div class="nudge-item">
+                  <div class="nudge-type">NEIGHBOR · 3h ago</div>
+                  <div class="nudge-title">You have a new vibe match</div>
+                  <div class="nudge-msg">Jordan in 4B is also into music and late nights. Maybe say hi?</div>
+                </div>
+                <div class="nudge-item" style="border-left-color:#334155;opacity:0.7">
+                  <div class="nudge-type" style="color:#475569">STREAK · 2d ago</div>
+                  <div class="nudge-title">3-day streak going</div>
+                  <div class="nudge-msg">You have been active 3 days in a row. Keep the momentum going.</div>
+                </div>
+                <div class="nudge-item" style="border-left-color:#334155;opacity:0.7">
+                  <div class="nudge-type" style="color:#475569">CHECK-IN · 3d ago</div>
+                  <div class="nudge-title">Things have been quiet</div>
+                  <div class="nudge-msg">It has been a few days since you checked in. There is a lot happening this week.</div>
+                </div>
+              </div>
+
+              <!-- Profile tab content -->
+              <div id="htab-profile" style="display:none;padding:16px 20px 80px">
+                <div style="font-size:20px;font-weight:700;color:#fff;margin-bottom:20px">Members</div>
+                <div style="display:flex;background:#161616;border-radius:10px;padding:4px;margin-bottom:16px">
+                  <div style="flex:1;padding:8px;border-radius:7px;text-align:center;font-size:12px;font-weight:600;background:var(--purple);color:#fff">My Cohort</div>
+                  <div style="flex:1;padding:8px;border-radius:7px;text-align:center;font-size:12px;font-weight:600;color:#475569">All Residents</div>
+                </div>
+                <div style="font-size:11px;color:#475569;background:rgba(124,92,252,0.08);border-radius:8px;padding:8px 12px;margin-bottom:14px;border:1px solid var(--border)">✦ Matched based on your vibe and availability</div>
+                <div class="member-item">
+                  <div class="member-avatar">J</div>
+                  <div><div class="member-name">Jordan Park</div><div class="member-meta">Unit 4B · Gaming · Introvert</div></div>
+                  <div class="member-badge">MATCH</div>
+                </div>
+                <div class="member-item">
+                  <div class="member-avatar" style="background:#22c55e">S</div>
+                  <div><div class="member-name">Sam Rivera</div><div class="member-meta">Unit 1C · Fitness · Ambivert</div></div>
+                  <div class="member-badge">MATCH</div>
+                </div>
+                <div class="member-item">
+                  <div class="member-avatar" style="background:#f59e0b">C</div>
+                  <div><div class="member-name">Casey Liu</div><div class="member-meta">Unit 1D · Music · Introvert</div></div>
+                  <div class="member-badge">MATCH</div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Tab Bar -->
+            <div class="tab-bar">
+              <div class="tab-btn active" id="tb-home" onclick="switchHomeTab('home')">Home</div>
+              <div class="tab-btn" id="tb-events" onclick="switchHomeTab('events')">Events</div>
+              <div class="tab-btn" id="tb-nudges" onclick="switchHomeTab('nudges')">Nudges</div>
+              <div class="tab-btn" id="tb-profile" onclick="switchHomeTab('profile')">Profile</div>
+            </div>
+          </div>
+
+        </div><!-- /screens -->
+      </div><!-- /phone-frame -->
+    </div><!-- /phone-wrap -->
+
+    <!-- Side panel -->
+    <div class="side-panel">
+      <div class="info-card">
+        <div class="info-card-label">Current Screen</div>
+        <div class="info-card-title" id="screen-title">Login Screen</div>
+        <div class="info-card-body" id="screen-desc">Alex's entry point into dwlr. Magic link login — residents get an invite from their operator and are in within 30 seconds. No app store required.</div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-card-label">Demo Progress</div>
+        <div class="step-indicators" id="step-indicators">
+          <div class="step-pill active" onclick="jumpTo(0)">Login</div>
+          <div class="step-pill" onclick="jumpTo(1)">Consent</div>
+          <div class="step-pill" onclick="jumpTo(2)">Pledge</div>
+          <div class="step-pill" onclick="jumpTo(3)">Vibe</div>
+          <div class="step-pill" onclick="jumpTo(4)">Profile</div>
+          <div class="step-pill" onclick="jumpTo(5)">Score</div>
+          <div class="step-pill" onclick="jumpTo(6)">Home</div>
+        </div>
+      </div>
+
+      <div class="nav-arrows">
+        <button class="arrow-btn" id="btn-prev" onclick="goBack()" disabled>← Back</button>
+        <button class="arrow-btn primary" id="btn-next" onclick="goNext()">Next →</button>
+      </div>
+
+      <div class="info-card" id="talking-point-card">
+        <div class="info-card-label">Talking Point</div>
+        <div class="info-card-body" id="talking-point">Residents receive an invite from their operator — tap the link, land here, and they are in the community within 30 seconds. No app store. No onboarding wall.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- OPERATOR DASHBOARD VIEW -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="view" id="view-operator">
+  <div class="dash-layout">
+
+    <!-- Sidebar -->
+    <aside class="dash-sidebar">
+      <div class="dash-sidebar-logo">
+        <div class="dash-logo">dwlr</div>
+        <div class="dash-logo-sub">Operator Portal</div>
+      </div>
+      <div class="dash-nav">
+        <div class="dash-nav-item active" onclick="showDashTab('overview', this)"><span class="dash-dot"></span> Overview</div>
+        <div class="dash-nav-item" onclick="showDashTab('residents', this)"><span class="dash-dot"></span> Residents</div>
+        <div class="dash-nav-item" onclick="showDashTab('churn', this)">
+          <span class="dash-dot"></span> Churn Risk
+          <span style="margin-left:auto;background:rgba(239,68,68,0.1);color:var(--red);font-family:'DM Mono',monospace;font-size:9px;padding:2px 6px;border-radius:4px">3</span>
+        </div>
+        <div class="dash-nav-item" onclick="showDashTab('events', this)"><span class="dash-dot"></span> Events</div>
+      </div>
+      <div class="dash-sidebar-footer">
+        <div class="property-card">
+          <div class="property-name">The Roost Seattle</div>
+          <div class="property-meta">48 units · 91% occupied</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="dash-main">
+
+      <!-- OVERVIEW -->
+      <div class="dash-tab-panel active" id="dtab-overview">
+        <div class="dash-topbar">
+          <div><div class="dash-title">Good morning, Operator</div><div class="dash-sub">The Roost Seattle · March 2026</div></div>
+          <button class="dash-export">Export Report</button>
+        </div>
+        <div class="stat-grid">
+          <div class="stat-card"><div class="stat-lbl">Avg Vibe Score</div><div class="stat-val purple">72</div><div class="stat-delta up">↑ +8 pts this month</div></div>
+          <div class="stat-card"><div class="stat-lbl">Engagement Rate</div><div class="stat-val green">68%</div><div class="stat-delta up">↑ +12% vs last month</div></div>
+          <div class="stat-card"><div class="stat-lbl">Events This Month</div><div class="stat-val">14</div><div class="stat-delta up">↑ 3 more than Feb</div></div>
+          <div class="stat-card"><div class="stat-lbl">Churn Risk</div><div class="stat-val amber">3</div><div class="stat-delta neutral">residents flagged</div></div>
+        </div>
+        <div class="two-col">
+          <div class="panel">
+            <div class="panel-hdr"><span class="panel-title">Engagement Breakdown</span><span class="panel-badge">This Month</span></div>
+            <div class="panel-body">
+              <div class="eng-row"><span class="eng-label">Event RSVPs</span><div class="eng-bar-wrap"><div class="eng-bar" style="width:78%"></div></div><span class="eng-pct">78%</span></div>
+              <div class="eng-row"><span class="eng-label">Nudge Response</span><div class="eng-bar-wrap"><div class="eng-bar" style="width:61%"></div></div><span class="eng-pct">61%</span></div>
+              <div class="eng-row"><span class="eng-label">Cohort Matches</span><div class="eng-bar-wrap"><div class="eng-bar" style="width:84%"></div></div><span class="eng-pct">84%</span></div>
+              <div class="eng-row"><span class="eng-label">Profile Complete</span><div class="eng-bar-wrap"><div class="eng-bar" style="width:91%"></div></div><span class="eng-pct">91%</span></div>
+              <div class="eng-row"><span class="eng-label">Active This Week</span><div class="eng-bar-wrap"><div class="eng-bar" style="width:55%"></div></div><span class="eng-pct">55%</span></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-hdr"><span class="panel-title">Live Activity</span><span class="panel-badge">Today</span></div>
+            <div class="panel-body">
+              <div class="activity-item"><div class="a-dot green"></div><span class="a-text">Alex (2A) RSVP'd to Rooftop Hangout</span><span class="a-time">9m ago</span></div>
+              <div class="activity-item"><div class="a-dot"></div><span class="a-text">Jordan (4B) matched with 2 new neighbors</span><span class="a-time">23m ago</span></div>
+              <div class="activity-item"><div class="a-dot amber"></div><span class="a-text">Riley (3C) has not logged in for 8 days</span><span class="a-time">1h ago</span></div>
+              <div class="activity-item"><div class="a-dot green"></div><span class="a-text">Study Session posted — 5 RSVPs already</span><span class="a-time">2h ago</span></div>
+              <div class="activity-item"><div class="a-dot"></div><span class="a-text">Casey (1D) completed onboarding</span><span class="a-time">3h ago</span></div>
+              <div class="activity-item"><div class="a-dot amber"></div><span class="a-text">Morgan (5A) Vibe Score dropped 12 pts</span><span class="a-time">5h ago</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-hdr"><span class="panel-title">Projected ROI — Year 1</span><span class="panel-badge">48 Units</span></div>
+          <div class="roi-grid">
+            <div class="roi-item"><div class="roi-val" style="color:var(--green)">$9.1K</div><div class="roi-lbl">Net ROI</div></div>
+            <div class="roi-item"><div class="roi-val" style="color:var(--purple)">2.1×</div><div class="roi-lbl">Return</div></div>
+            <div class="roi-item"><div class="roi-val">5.6</div><div class="roi-lbl">Month Payback</div></div>
+            <div class="roi-item"><div class="roi-val" style="color:var(--amber)">+14%</div><div class="roi-lbl">Renewal Lift</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RESIDENTS -->
+      <div class="dash-tab-panel" id="dtab-residents">
+        <div class="dash-topbar">
+          <div><div class="dash-title">Residents</div><div class="dash-sub">44 active · 4 inactive · 3 at risk</div></div>
+          <button class="dash-export">+ Add Resident</button>
+        </div>
+        <div class="search-bar">
+          <input class="search-input" placeholder="Search residents by name or unit..." />
+          <button class="filter-btn">Filter</button>
+          <button class="filter-btn">Sort: Vibe Score ↓</button>
+        </div>
+        <div class="panel">
+          <table class="res-table">
+            <thead><tr><th>Resident</th><th>Unit</th><th>Vibe Score</th><th>Status</th><th>Last Active</th><th>Events</th><th>Lease End</th></tr></thead>
+            <tbody>
+              <tr><td><div class="res-name">Alex Chen</div></td><td><span class="res-unit">2A</span></td><td><span class="score-mini-wrap"><span class="score-mini" style="width:86%"></span></span><span style="font-family:'DM Mono',monospace;font-size:11px">86</span></td><td><span class="pill pill-green">● Active</span></td><td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">Today</td><td style="font-family:'DM Mono',monospace;font-size:11px">12/mo</td><td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">Aug 2026</td></tr>
+              <tr><td><div class="res-name">Jordan Park</div></td><td><span class="res-unit">4B</span></td><td><span class="score-mini-wrap"><span class="score-mini" style="width:79%"></span></span><span style="font-family:'DM Mono',monospace;font-size:11px">79</span></td><td><span class="pill pill-green">● Active</span></td><td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">Today</td><td style="font-family:'DM Mono',monospace;font-size:11px">9/mo</td><td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">Sep 2026</td></tr>
+              <tr><td><div class="res-name">Sam Rivera</div></td><td><span class="res-unit">1C</span></td><td><span class="score-mini-wrap"><span class="score-mini" style="width:71%"></span></span><span style="font-family:'DM Mono',monospace;font-size:11px">71</span></td><td><span class="pill pill-green">● Active</span></td><td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">Yesterday</td><td style="font-family:'DM Mono',monospace;font-size:11px">7/mo</td><td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">Jul 2026</td></tr>
+              <tr><td><div class="res-name">Casey Liu</div></td><td><span class="res-unit">1D</span></td><td><span class="score-mini-wrap"><span class="score-mini" style="width:50%"></span></span><span style="font-family:'DM Mono',monospace;font-size:11px">50</span></td><td><span class="pill pill-purple">◆ New</span></td><td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">Today</td><td style="font-family:'DM Mono',monospace;font-size:11px">2/mo</td><td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">Mar 2027</td></tr>
+              <tr><td><div class="res-name">Riley Torres</div></td><td><span class="res-unit">3C</span></td><td><span class="score-mini-wrap"><span class="score-mini" style="width:38%;background:var(--amber)"></span></span><span style="font-family:'DM Mono',monospace;font-size:11px">38</span></td><td><span class="pill pill-amber">◐ Moderate</span></td><td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">8d ago</td><td style="font-family:'DM Mono',monospace;font-size:11px">1/mo</td><td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--amber)">Apr 2026</td></tr>
+              <tr><td><div class="res-name">Morgan Wells</div></td><td><span class="res-unit">5A</span></td><td><span class="score-mini-wrap"><span class="score-mini" style="width:22%;background:var(--red)"></span></span><span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--red)">22</span></td><td><span class="pill pill-red">○ Inactive</span></td><td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">14d ago</td><td style="font-family:'DM Mono',monospace;font-size:11px">0/mo</td><td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--red)">May 2026</td></tr>
+              <tr><td><div class="res-name">Drew Kim</div></td><td><span class="res-unit">2C</span></td><td><span class="score-mini-wrap"><span class="score-mini" style="width:65%"></span></span><span style="font-family:'DM Mono',monospace;font-size:11px">65</span></td><td><span class="pill pill-green">● Active</span></td><td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">2d ago</td><td style="font-family:'DM Mono',monospace;font-size:11px">5/mo</td><td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">Oct 2026</td></tr>
+              <tr><td><div class="res-name">Taylor Nguyen</div></td><td><span class="res-unit">3A</span></td><td><span class="score-mini-wrap"><span class="score-mini" style="width:58%"></span></span><span style="font-family:'DM Mono',monospace;font-size:11px">58</span></td><td><span class="pill pill-green">● Active</span></td><td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">3d ago</td><td style="font-family:'DM Mono',monospace;font-size:11px">4/mo</td><td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">Nov 2026</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CHURN -->
+      <div class="dash-tab-panel" id="dtab-churn">
+        <div class="dash-topbar">
+          <div><div class="dash-title">Churn Risk</div><div class="dash-sub">3 residents flagged · Action recommended</div></div>
+          <button class="dash-export">Send Nudge Campaign</button>
+        </div>
+        <div class="alert-bar">⚠ <strong>3 residents</strong> show high churn signals. Two have leases expiring within 60 days. Automated nudges have been queued.</div>
+        <div class="sec-hdr"><span class="sec-title">High Risk</span></div>
+        <div class="risk-card">
+          <div class="risk-icon-box risk-high">⬇</div>
+          <div style="flex:1">
+            <div class="risk-name">Morgan Wells — Unit 5A</div>
+            <div class="risk-reason">14 days inactive · 0 events attended · Vibe Score dropped 34 pts</div>
+            <div class="risk-signals"><span class="sig sig-red">NO LOGIN 14D</span><span class="sig sig-red">0 RSVPS</span><span class="sig sig-red">LEASE MAY 2026</span><span class="sig sig-amber">SCORE ↓34</span></div>
+          </div>
+          <div style="text-align:center;flex-shrink:0"><div class="risk-pct">87%</div><div class="risk-pct-lbl">CHURN RISK</div></div>
+        </div>
+        <div class="risk-card">
+          <div class="risk-icon-box risk-high">⬇</div>
+          <div style="flex:1">
+            <div class="risk-name">Riley Torres — Unit 3C</div>
+            <div class="risk-reason">8 days inactive · 1 event attended · Lease up in 32 days</div>
+            <div class="risk-signals"><span class="sig sig-red">LEASE APR 2026</span><span class="sig sig-amber">LOW ACTIVITY</span><span class="sig sig-amber">SCORE 38</span></div>
+          </div>
+          <div style="text-align:center;flex-shrink:0"><div class="risk-pct">72%</div><div class="risk-pct-lbl">CHURN RISK</div></div>
+        </div>
+        <div class="sec-hdr" style="margin-top:20px"><span class="sec-title">Medium Risk</span></div>
+        <div class="risk-card">
+          <div class="risk-icon-box risk-medium">→</div>
+          <div style="flex:1">
+            <div class="risk-name">Drew Kim — Unit 2C</div>
+            <div class="risk-reason">Engagement declining 3 weeks in a row · No cohort interactions</div>
+            <div class="risk-signals"><span class="sig sig-amber">DECLINING TREND</span><span class="sig sig-amber">NO COHORT</span></div>
+          </div>
+          <div style="text-align:center;flex-shrink:0"><div class="risk-pct amber">41%</div><div class="risk-pct-lbl">CHURN RISK</div></div>
+        </div>
+        <div class="panel" style="margin-top:20px">
+          <div class="panel-hdr"><span class="panel-title">Recommended Actions</span></div>
+          <div class="panel-body">
+            <div class="activity-item"><div class="a-dot amber"></div><span class="a-text"><strong>Send re-engagement nudge</strong> to Morgan — personalized event suggestion based on past vibe data</span><span class="a-time" style="color:var(--purple);cursor:pointer">Send →</span></div>
+            <div class="activity-item"><div class="a-dot amber"></div><span class="a-text"><strong>Renewal conversation trigger</strong> for Riley — lease expires in 32 days, recommend operator outreach</span><span class="a-time" style="color:var(--purple);cursor:pointer">Flag →</span></div>
+            <div class="activity-item"><div class="a-dot"></div><span class="a-text"><strong>Cohort introduction</strong> for Drew — match with 2 compatible neighbors to rebuild engagement</span><span class="a-time" style="color:var(--purple);cursor:pointer">Match →</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EVENTS -->
+      <div class="dash-tab-panel" id="dtab-events">
+        <div class="dash-topbar">
+          <div><div class="dash-title">Events</div><div class="dash-sub">4 upcoming · 10 completed this month</div></div>
+          <button class="dash-export">+ Post Event</button>
+        </div>
+        <div class="sec-hdr"><span class="sec-title">Upcoming</span></div>
+        <div class="ev-card"><div class="ev-date"><div class="ev-mo">MAR</div><div class="ev-day">24</div></div><div style="flex:1"><div class="ev-name">Rooftop Hangout</div><div class="ev-meta">7:00 PM · Rooftop Deck · Operator posted</div></div><div class="ev-stats"><div><div class="ev-stat-val" style="color:var(--purple)">12</div><div class="ev-stat-lbl">RSVPs</div></div><div><div class="ev-stat-val">25%</div><div class="ev-stat-lbl">of Bldg</div></div></div><span class="pill pill-green" style="flex-shrink:0">Upcoming</span></div>
+        <div class="ev-card"><div class="ev-date"><div class="ev-mo">MAR</div><div class="ev-day">26</div></div><div style="flex:1"><div class="ev-name">Study Session @ Lobby</div><div class="ev-meta">4:00 PM · Lobby Common Room · Resident org</div></div><div class="ev-stats"><div><div class="ev-stat-val" style="color:var(--purple)">7</div><div class="ev-stat-lbl">RSVPs</div></div><div><div class="ev-stat-val">15%</div><div class="ev-stat-lbl">of Bldg</div></div></div><span class="pill pill-green" style="flex-shrink:0">Upcoming</span></div>
+        <div class="ev-card"><div class="ev-date"><div class="ev-mo">MAR</div><div class="ev-day">30</div></div><div style="flex:1"><div class="ev-name">Sunday Brunch Run</div><div class="ev-meta">10:00 AM · Meet at Lobby · Fitness group</div></div><div class="ev-stats"><div><div class="ev-stat-val" style="color:var(--purple)">15</div><div class="ev-stat-lbl">RSVPs</div></div><div><div class="ev-stat-val">31%</div><div class="ev-stat-lbl">of Bldg</div></div></div><span class="pill pill-green" style="flex-shrink:0">Upcoming</span></div>
+        <div class="sec-hdr" style="margin-top:24px"><span class="sec-title">Completed This Month</span><span class="sec-action">View all →</span></div>
+        <div class="ev-card" style="opacity:0.7"><div class="ev-date"><div class="ev-mo">MAR</div><div class="ev-day">18</div></div><div style="flex:1"><div class="ev-name">Game Night</div><div class="ev-meta">6:00 PM · Common Room</div></div><div class="ev-stats"><div><div class="ev-stat-val">19</div><div class="ev-stat-lbl">Attended</div></div><div><div class="ev-stat-val" style="color:var(--green)">40%</div><div class="ev-stat-lbl">of Bldg</div></div></div><span class="pill" style="background:rgba(34,197,94,0.1);color:var(--green);flex-shrink:0">Completed</span></div>
+        <div class="ev-card" style="opacity:0.7"><div class="ev-date"><div class="ev-mo">MAR</div><div class="ev-day">14</div></div><div style="flex:1"><div class="ev-name">Yoga on the Rooftop</div><div class="ev-meta">8:00 AM · Rooftop Deck</div></div><div class="ev-stats"><div><div class="ev-stat-val">11</div><div class="ev-stat-lbl">Attended</div></div><div><div class="ev-stat-val" style="color:var(--green)">23%</div><div class="ev-stat-lbl">of Bldg</div></div></div><span class="pill" style="background:rgba(34,197,94,0.1);color:var(--green);flex-shrink:0">Completed</span></div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script>
+// ── Screen data ──────────────────────────────────────────────────────────
+const SCREENS = [
+  { id:'login',     title:'Login Screen',       desc:'Alex\'s entry point into dwlr.',       talk:'Residents receive an invite from their operator — tap the link, land here, and they are in the community within 30 seconds. No app store. No onboarding wall.' },
+  { id:'consent',   title:'Data Consent',        desc:'Privacy controls before anything else.',talk:'Before anything else, residents see exactly what we collect and why. We handle consent at the app layer — operators never have to think about privacy compliance.' },
+  { id:'pledge',    title:'Community Pledge',    desc:'Social contract, community norms.',     talk:'Every resident takes a short pledge — Show up. Be yourself. Respect your neighbors. This primes residents to treat dwlr as a real community, not just another app.' },
+  { id:'vibe',      title:'Vibe Selection',      desc:'Energy type and interests.',            talk:'This is the data the AI engine runs on. Every event suggestion, every cohort match, every nudge — it all flows from this profile. Set once, powers everything.' },
+  { id:'profile',   title:'Profile Preview',     desc:'Alex\'s completed profile.',            talk:'Alex is an extrovert into music, food, fitness, and late nights. Free on weekday evenings and Saturday afternoons. This is why the home screen looks the way it does.' },
+  { id:'vibescore', title:'Vibe Score',           desc:'Gamified engagement score.',           talk:'Residents with higher Vibe Scores are 3x more likely to renew. Operators see score trends in the dashboard — it is the earliest signal of churn risk.' },
+  { id:'home',      title:'Home Screen',          desc:'Personalized feed, cohort, events.',   talk:'Everything here is personalized. Three events matched to Alex\'s vibe, his AI-matched cohort, one-tap RSVP. A 200-unit property generates $19K net ROI in year one from improved retention alone.' },
+];
+
+let currentScreen = 0;
+
+function updateSidePanel() {
+  const s = SCREENS[currentScreen];
+  document.getElementById('screen-title').textContent = s.title;
+  document.getElementById('screen-desc').textContent = s.desc;
+  document.getElementById('talking-point').textContent = s.talk;
+  document.getElementById('btn-prev').disabled = currentScreen === 0;
+  document.getElementById('btn-next').textContent = currentScreen === SCREENS.length - 1 ? '✓ Done' : 'Next →';
+  // Update pills
+  document.querySelectorAll('.step-pill').forEach((p, i) => {
+    p.className = 'step-pill' + (i < currentScreen ? ' done' : i === currentScreen ? ' active' : '');
+  });
+}
+
+function showScreen(idx) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + SCREENS[idx].id).classList.add('active');
+  // Scroll to top
+  document.getElementById('screen-' + SCREENS[idx].id).scrollTop = 0;
+  currentScreen = idx;
+  updateSidePanel();
+}
+
+function goNext() {
+  if (currentScreen < SCREENS.length - 1) showScreen(currentScreen + 1);
+}
+
+function goBack() {
+  if (currentScreen > 0) showScreen(currentScreen - 1);
+}
+
+function goHome() { showScreen(6); }
+
+function jumpTo(idx) { showScreen(idx); }
+
+// Home tab switching
+function switchHomeTab(tab) {
+  ['home','events','nudges','profile'].forEach(t => {
+    document.getElementById('htab-' + t).style.display = t === tab ? 'block' : 'none';
+    document.getElementById('tb-' + t).className = 'tab-btn' + (t === tab ? ' active' : '');
+  });
+}
+
+// Top nav switching
+function switchView(view, el) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('view-' + view).classList.add('active');
+  el.classList.add('active');
+}
+
+// Operator dashboard tabs
+function showDashTab(name, el) {
+  document.querySelectorAll('.dash-tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.dash-nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('dtab-' + name).classList.add('active');
+  el.classList.add('active');
+}
+
+// Init
+updateSidePanel();
+</script>
+</body>
+</html>
