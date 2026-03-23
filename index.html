@@ -1096,6 +1096,7 @@ function updateSidePanel() {
 }
 
 function showScreen(idx) {
+  dwlrOnScreenChange(idx);
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-' + SCREENS[idx].id).classList.add('active');
   // Scroll to top
@@ -1145,29 +1146,26 @@ updateSidePanel();
 </script>
 
 <script>
-// ── DWLR NARRATION SYSTEM (USER-TRIGGERED) ─────────────────────────────────
+// ── DWLR NARRATION SYSTEM ───────────────────────────────────────────────────
 const DWLR_NARRATION = {
   0: "Welcome to Dwlr by Vivio. This demo follows Alex, a 22-year-old moving into co-living for the first time. Dwlr is an AI-powered community engagement platform for Gen Z co-living operators. Our mission: turn strangers into neighbors, and neighbors into reasons to stay.",
-  1: "This is Alex's personalized home feed. The Vibe Score is our proprietary engagement metric — a real-time measure of how connected Alex feels in the building. Every activity suggestion is curated by AI based on Alex's interests, schedule, and social graph.",
-  2: "Dwlr's AI nudge engine proactively surfaces moments for connection. When Alex's Vibe Score dips, or three days pass without an RSVP, the system sends a light, personalized prompt. This is retention on autopilot.",
+  1: "This is Alex's personalized home feed. The Vibe Score is our proprietary engagement metric — a real-time measure of how connected Alex feels in the building. Every activity here is curated by AI based on Alex's interests, schedule, and social graph.",
+  2: "Dwlr's AI nudge engine proactively surfaces moments for connection. When Alex's Vibe Score dips, or three days pass without an RSVP, the system sends a light personalized prompt. This is retention on autopilot.",
   3: "The events screen makes participation frictionless. One tap to RSVP. Peer attendance signals create social urgency. Every event is matched to resident profiles by AI, not manually curated by staff.",
-  4: "The operator dashboard is the business case in one screen. Engagement rate, Vibe Score trends, and churn risk alerts — all in real time. When a resident's engagement drops, operators get flagged before that resident decides to leave.",
+  4: "The operator dashboard is the business case in one screen. Engagement rate, Vibe Score trends, and churn risk alerts — all in real time. When a resident's engagement drops, operators are flagged before that resident decides to leave.",
+  5: "Dwlr pricing is simple — per resident, per month. Operators see an average of nineteen thousand dollars in net ROI in year one, a 2.1 times return with a 5.6 month payback. The math works from day one.",
+  6: "That is the full Dwlr experience — from Alex's first day to the operator's dashboard. If this resonates, we would love to show you the live pilot. Thank you for watching.",
 };
 
 let dwlrNarrationOn = false;
-let dwlrCurrentScreen = 0;
 
-function dwlrSpeak(screenIndex) {
-  if (!dwlrNarrationOn) return;
-  if (!DWLR_NARRATION[screenIndex]) return;
+function dwlrSpeak(text) {
   if (!window.speechSynthesis) return;
-
   window.speechSynthesis.cancel();
-  const utter = new SpeechSynthesisUtterance(DWLR_NARRATION[screenIndex]);
+  const utter = new SpeechSynthesisUtterance(text);
   utter.rate = 0.78;
   utter.pitch = 1.0;
   utter.volume = 1.0;
-
   const voices = window.speechSynthesis.getVoices();
   const preferred = voices.find(v =>
     v.name.includes("Samantha") ||
@@ -1177,6 +1175,12 @@ function dwlrSpeak(screenIndex) {
   );
   if (preferred) utter.voice = preferred;
   window.speechSynthesis.speak(utter);
+}
+
+function dwlrOnScreenChange(idx) {
+  if (dwlrNarrationOn && DWLR_NARRATION[idx]) {
+    dwlrSpeak(DWLR_NARRATION[idx]);
+  }
 }
 
 function dwlrUpdateBtn() {
@@ -1197,9 +1201,6 @@ function dwlrToggleNarration() {
   dwlrNarrationOn = !dwlrNarrationOn;
   if (!dwlrNarrationOn) {
     if (window.speechSynthesis) window.speechSynthesis.cancel();
-  } else {
-    // Narrate current screen immediately when turned on
-    dwlrSpeak(dwlrCurrentScreen);
   }
   dwlrUpdateBtn();
 }
@@ -1210,9 +1211,8 @@ document.addEventListener("DOMContentLoaded", function() {
     window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
   }
 
-  // Inject button into header
   const header = document.querySelector("header") ||
-                 document.querySelector(".header") ||
+                 document.querySelector(".demo-header") ||
                  document.querySelector("[class*='header']");
 
   const btn = document.createElement("button");
@@ -1220,17 +1220,17 @@ document.addEventListener("DOMContentLoaded", function() {
   btn.textContent = "🔇 Narration Off";
   btn.onclick = dwlrToggleNarration;
   btn.style.cssText = [
-    "padding: 7px 16px",
-    "border-radius: 20px",
-    "border: none",
-    "background: rgba(255,255,255,0.08)",
-    "color: rgba(255,255,255,0.5)",
-    "font-size: 12px",
-    "font-weight: 600",
-    "font-family: inherit",
-    "cursor: pointer",
-    "transition: all 0.2s",
-    "white-space: nowrap",
+    "padding:7px 16px",
+    "border-radius:20px",
+    "border:none",
+    "background:rgba(255,255,255,0.08)",
+    "color:rgba(255,255,255,0.5)",
+    "font-size:12px",
+    "font-weight:600",
+    "font-family:inherit",
+    "cursor:pointer",
+    "transition:all 0.2s",
+    "white-space:nowrap",
   ].join(";");
 
   if (header) {
@@ -1239,22 +1239,6 @@ document.addEventListener("DOMContentLoaded", function() {
     btn.style.cssText += ";position:fixed;top:16px;right:16px;z-index:9999";
     document.body.appendChild(btn);
   }
-
-  // Hook into goTo so narration fires on every user navigation
-  let attempts = 0;
-  const poll = setInterval(() => {
-    attempts++;
-    if (typeof window.goTo === "function") {
-      const originalGoTo = window.goTo;
-      window.goTo = function(n) {
-        originalGoTo(n);
-        dwlrCurrentScreen = n;
-        dwlrSpeak(n);
-      };
-      clearInterval(poll);
-    }
-    if (attempts > 80) clearInterval(poll);
-  }, 100);
 });
 </script>
 
