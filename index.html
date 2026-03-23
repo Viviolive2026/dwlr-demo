@@ -1173,7 +1173,27 @@ function dwlrSpeak(text) {
     v.lang === "en-US"
   );
   if (preferred) utter.voice = preferred;
-  utter.onend = () => { dwlrNarrating = false; dwlrUpdateBtn(); };
+  utter.onend = () => {
+    dwlrNarrating = false;
+    dwlrUpdateBtn();
+    // Auto-advance to next screen
+    if (dwlrAutoPlay) {
+      const screens = Object.keys(DWLR_NARRATION).map(Number).sort((a,b) => a-b);
+      const currentIdx = screens.indexOf(dwlrCurrentScreen);
+      if (currentIdx >= 0 && currentIdx < screens.length - 1) {
+        const nextScreen = screens[currentIdx + 1];
+        setTimeout(() => {
+          if (dwlrAutoPlay && typeof window.goTo === "function") {
+            window.goTo(nextScreen);
+          }
+        }, 800);
+      } else {
+        // Tour complete
+        dwlrAutoPlay = false;
+        dwlrUpdateBtn();
+      }
+    }
+  };
   window.speechSynthesis.speak(utter);
   dwlrNarrating = true;
   dwlrUpdateBtn();
@@ -1189,15 +1209,15 @@ function dwlrUpdateBtn() {
   const btn = document.getElementById("dwlr-narration-btn");
   if (!btn) return;
   if (dwlrNarrating) {
-    btn.textContent = "⏸  Narrating...";
+    btn.textContent = "⏸  Stop Tour";
     btn.style.background = "#7b6ff0";
     btn.style.color = "#fff";
   } else if (dwlrAutoPlay) {
-    btn.textContent = "▶  Narration On";
+    btn.textContent = "⏸  Stop Tour";
     btn.style.background = "#7b6ff0";
     btn.style.color = "#fff";
   } else {
-    btn.textContent = "▶  Play Narration";
+    btn.textContent = "▶  Start Guided Tour";
     btn.style.background = "rgba(255,255,255,0.08)";
     btn.style.color = "rgba(255,255,255,0.7)";
   }
@@ -1211,15 +1231,15 @@ function dwlrNarrateScreen(n) {
 }
 
 function dwlrToggleNarration() {
-  if (dwlrNarrating) {
-    dwlrStop();
-    dwlrAutoPlay = false;
-  } else if (dwlrAutoPlay) {
+  if (dwlrNarrating || dwlrAutoPlay) {
     dwlrAutoPlay = false;
     dwlrStop();
   } else {
+    // Always start tour from screen 0
     dwlrAutoPlay = true;
-    dwlrSpeak(DWLR_NARRATION[dwlrCurrentScreen] || DWLR_NARRATION[0]);
+    dwlrCurrentScreen = 0;
+    if (typeof window.goTo === "function") window.goTo(0);
+    setTimeout(() => dwlrSpeak(DWLR_NARRATION[0]), 300);
   }
   dwlrUpdateBtn();
 }
