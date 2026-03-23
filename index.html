@@ -1136,6 +1136,7 @@ function switchView(view, el) {
 
 // Operator dashboard tabs
 function showDashTab(name, el) {
+  dwlrOnScreenChange('dash-' + name);
   document.querySelectorAll('.dash-tab-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.dash-nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('dtab-' + name).classList.add('active');
@@ -1157,6 +1158,10 @@ const DWLR_NARRATION = {
   5: "The Vibe Score is Alex's engagement metric — a real-time measure of how connected they feel in the building. Operators can see this score in aggregate across all residents. A rising Vibe Score means a healthy community. A dropping score is an early warning signal.",
   6: "This is Alex's personalized home feed. Every activity here was curated by AI based on their profile — not a generic bulletin board. Dwlr surfaces the right moment, for the right person, at the right time. This is what turns a new move-in into a long-term resident.",
   operator: "This is the operator dashboard — the business case in one screen. The Roost Seattle can see engagement rates, Vibe Score trends, upcoming events, and churn risk alerts all in real time. When a resident's score drops, the operator is flagged before that resident decides to leave. For a 200-unit building, preventing just two move-outs a year more than pays for Dwlr.",
+  "dash-overview": "The overview tab gives operators a live pulse of the building. Engagement rate, average Vibe Score, event attendance, and renewal forecasts — all updated in real time. This is the command center operators have never had before.",
+  "dash-residents": "The residents tab shows every person in the building and their individual Vibe Score. Operators can see at a glance who is thriving, who is disengaged, and who needs a personal outreach. This level of visibility is completely new to the industry.",
+  "dash-churn": "Churn risk is where Dwlr pays for itself. Our AI flags residents whose engagement is dropping — weeks before they would typically give notice. Each flagged resident is a conversation the operator can have today instead of an empty unit tomorrow.",
+  "dash-events": "The events tab shows upcoming community programming and real-time RSVP counts. Operators can see which events are driving engagement and which need a boost. Dwlr's AI can automatically nudge under-attended events to matched residents.",
 };
 
 let dwlrNarrationOn = false;
