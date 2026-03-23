@@ -1127,6 +1127,7 @@ function switchHomeTab(tab) {
 
 // Top nav switching
 function switchView(view, el) {
+  if (view === 'operator') dwlrOnScreenChange('operator');
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('view-' + view).classList.add('active');
@@ -1155,6 +1156,7 @@ const DWLR_NARRATION = {
   4: "Alex's profile is the engine behind everything. Interests, availability, and connection history all feed the AI. The more Alex engages, the smarter the recommendations get.",
   5: "The Vibe Score is Alex's engagement metric — a real-time measure of how connected they feel in the building. Operators can see this score in aggregate across all residents. A rising Vibe Score means a healthy community. A dropping score is an early warning signal.",
   6: "This is Alex's personalized home feed. Every activity here was curated by AI based on their profile — not a generic bulletin board. Dwlr surfaces the right moment, for the right person, at the right time. This is what turns a new move-in into a long-term resident.",
+  operator: "This is the operator dashboard — the business case in one screen. The Roost Seattle can see engagement rates, Vibe Score trends, upcoming events, and churn risk alerts all in real time. When a resident's score drops, the operator is flagged before that resident decides to leave. For a 200-unit building, preventing just two move-outs a year more than pays for Dwlr.",
 };
 
 let dwlrNarrationOn = false;
@@ -1210,6 +1212,8 @@ document.addEventListener("DOMContentLoaded", function() {
     window.speechSynthesis.getVoices();
     window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
   }
+  // Fire intro narration on page load after short delay
+  setTimeout(() => { dwlrOnScreenChange(0); }, 800);
 
   const header = document.querySelector("header") ||
                  document.querySelector(".demo-header") ||
