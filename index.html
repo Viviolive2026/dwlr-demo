@@ -1143,5 +1143,157 @@ function showDashTab(name, el) {
 // Init
 updateSidePanel();
 </script>
+
+<script>
+// ── DWLR NARRATION SYSTEM ─────────────────────────────────────────────────
+const DWLR_NARRATION = {
+  0: "Welcome to Dwlr by Vivio. This demo follows Alex, a 22-year-old moving into co-living for the first time. Dwlr is an AI-powered community engagement platform for Gen Z co-living operators. Our mission: turn strangers into neighbors, and neighbors into reasons to stay. Let's take a look.",
+  1: "This is Alex's personalized home feed. The Vibe Score at the top is our proprietary engagement metric — a real-time measure of how connected Alex feels in the building. Higher Vibe Score means lower churn risk for the operator. Every activity suggestion is curated by AI based on Alex's interests, schedule, and social graph.",
+  2: "Dwlr's AI nudge engine proactively surfaces moments for connection. When Alex's Vibe Score dips, or three days pass without an RSVP, the system sends a light, personalized prompt. This is retention on autopilot — operators don't have to lift a finger.",
+  3: "The events screen makes participation frictionless. One tap to RSVP. Peer attendance signals create social urgency — when Alex sees that six neighbors are already going, that matters. Every event is matched to resident profiles, not manually curated by staff.",
+  4: "The operator dashboard is the business case in one screen. Engagement rate, Vibe Score trends, event attendance, and — most importantly — churn risk alerts. When a resident's engagement drops, operators get flagged before that resident decides to leave. For a 200-unit building, preventing two move-outs per year more than pays for Dwlr.",
+};
+
+let dwlrNarrating = false;
+let dwlrAutoPlay = false;
+let dwlrCurrentScreen = 0;
+
+function dwlrSpeak(text) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.rate = 0.93;
+  utter.pitch = 1.0;
+  utter.volume = 1.0;
+  const voices = window.speechSynthesis.getVoices();
+  const preferred = voices.find(v =>
+    v.name.includes("Samantha") ||
+    v.name.includes("Karen") ||
+    v.name.includes("Google US English") ||
+    v.lang === "en-US"
+  );
+  if (preferred) utter.voice = preferred;
+  utter.onend = () => { dwlrNarrating = false; dwlrUpdateBtn(); };
+  window.speechSynthesis.speak(utter);
+  dwlrNarrating = true;
+  dwlrUpdateBtn();
+}
+
+function dwlrStop() {
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+  dwlrNarrating = false;
+  dwlrUpdateBtn();
+}
+
+function dwlrUpdateBtn() {
+  const btn = document.getElementById("dwlr-narration-btn");
+  if (!btn) return;
+  if (dwlrNarrating) {
+    btn.textContent = "⏸  Narrating...";
+    btn.style.background = "#7b6ff0";
+    btn.style.color = "#fff";
+  } else if (dwlrAutoPlay) {
+    btn.textContent = "▶  Narration On";
+    btn.style.background = "#7b6ff0";
+    btn.style.color = "#fff";
+  } else {
+    btn.textContent = "▶  Play Narration";
+    btn.style.background = "rgba(255,255,255,0.08)";
+    btn.style.color = "rgba(255,255,255,0.7)";
+  }
+}
+
+function dwlrNarrateScreen(n) {
+  dwlrCurrentScreen = n;
+  if (dwlrAutoPlay && DWLR_NARRATION[n]) {
+    dwlrSpeak(DWLR_NARRATION[n]);
+  }
+}
+
+function dwlrToggleNarration() {
+  if (dwlrNarrating) {
+    dwlrStop();
+    dwlrAutoPlay = false;
+  } else if (dwlrAutoPlay) {
+    dwlrAutoPlay = false;
+    dwlrStop();
+  } else {
+    dwlrAutoPlay = true;
+    dwlrSpeak(DWLR_NARRATION[dwlrCurrentScreen] || DWLR_NARRATION[0]);
+  }
+  dwlrUpdateBtn();
+}
+
+// Inject narration button into header once DOM is ready
+document.addEventListener("DOMContentLoaded", function() {
+  // Load voices
+  if (window.speechSynthesis) {
+    window.speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+  }
+
+  // Find header to inject button
+  const header = document.querySelector("header") ||
+                 document.querySelector(".header") ||
+                 document.querySelector("[class*='header']");
+
+  const btn = document.createElement("button");
+  btn.id = "dwlr-narration-btn";
+  btn.textContent = "▶  Play Narration";
+  btn.onclick = dwlrToggleNarration;
+  btn.style.cssText = `
+    padding: 7px 16px;
+    border-radius: 20px;
+    border: none;
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.7);
+    font-size: 12px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  `;
+
+  if (header) {
+    header.appendChild(btn);
+  } else {
+    // Fallback: fixed position button
+    btn.style.cssText += `
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 9999;
+    `;
+    document.body.appendChild(btn);
+  }
+
+  // Hook into existing goTo / navigation function
+  // Intercept screen changes by watching the existing goTo function
+  const originalGoTo = window.goTo;
+  if (typeof originalGoTo === "function") {
+    window.goTo = function(n) {
+      originalGoTo(n);
+      dwlrNarrateScreen(n);
+    };
+  } else {
+    // Poll for goTo if not yet defined
+    let attempts = 0;
+    const poll = setInterval(() => {
+      attempts++;
+      if (typeof window.goTo === "function") {
+        const orig = window.goTo;
+        window.goTo = function(n) {
+          orig(n);
+          dwlrNarrateScreen(n);
+        };
+        clearInterval(poll);
+      }
+      if (attempts > 50) clearInterval(poll);
+    }, 100);
+  }
+});
+</script>
+
 </body>
 </html>
