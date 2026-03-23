@@ -1145,172 +1145,129 @@ updateSidePanel();
 </script>
 
 <script>
-// ── DWLR NARRATION SYSTEM ─────────────────────────────────────────────────
-const DWLR_NARRATION = {
-  0: "Welcome to Dwlr by Vivio. This demo follows Alex, a 22-year-old moving into co-living for the first time. Dwlr is an AI-powered community engagement platform for Gen Z co-living operators. Our mission: turn strangers into neighbors, and neighbors into reasons to stay. Let's take a look.",
-  1: "This is Alex's personalized home feed. The Vibe Score at the top is our proprietary engagement metric — a real-time measure of how connected Alex feels in the building. Higher Vibe Score means lower churn risk for the operator. Every activity suggestion is curated by AI based on Alex's interests, schedule, and social graph.",
-  2: "Dwlr's AI nudge engine proactively surfaces moments for connection. When Alex's Vibe Score dips, or three days pass without an RSVP, the system sends a light, personalized prompt. This is retention on autopilot — operators don't have to lift a finger.",
-  3: "The events screen makes participation frictionless. One tap to RSVP. Peer attendance signals create social urgency — when Alex sees that six neighbors are already going, that matters. Every event is matched to resident profiles, not manually curated by staff.",
-  4: "The operator dashboard is the business case in one screen. Engagement rate, Vibe Score trends, event attendance, and — most importantly — churn risk alerts. When a resident's engagement drops, operators get flagged before that resident decides to leave. For a 200-unit building, preventing two move-outs per year more than pays for Dwlr.",
-};
+// ── DWLR NARRATION SYSTEM (TOUR MODE) ──────────────────────────────────────
+const DWLR_NARRATION = [
+  { screen: 0, text: "Welcome to Dwlr by Vivio. This demo follows Alex, a 22-year-old moving into co-living for the first time. Dwlr is an AI-powered community engagement platform for Gen Z co-living operators. Our mission: turn strangers into neighbors, and neighbors into reasons to stay. Let us take a look." },
+  { screen: 1, text: "This is Alex's personalized home feed. The Vibe Score at the top is our proprietary engagement metric — a real-time measure of how connected Alex feels in the building. Higher Vibe Score means lower churn risk for the operator. Every activity suggestion is curated by AI based on Alex's interests, schedule, and social graph." },
+  { screen: 2, text: "Dwlr's AI nudge engine proactively surfaces moments for connection. When Alex's Vibe Score dips, or three days pass without an RSVP, the system sends a light, personalized prompt. This is retention on autopilot — operators do not have to lift a finger." },
+  { screen: 3, text: "The events screen makes participation frictionless. One tap to RSVP. Peer attendance signals create social urgency — when Alex sees that six neighbors are already going, that matters. Every event is matched to resident profiles by AI, not manually curated by staff." },
+  { screen: 4, text: "The operator dashboard is the business case in one screen. Engagement rate, Vibe Score trends, event attendance, and — most importantly — churn risk alerts. When a resident's engagement drops, operators get flagged before that resident decides to leave. For a 200-unit building, preventing two move-outs per year more than pays for Dwlr." },
+];
 
-let dwlrNarrating = false;
-let dwlrAutoPlay = false;
-let dwlrCurrentScreen = 0;
+let dwlrTourActive = false;
+let dwlrTourIndex = 0;
+let dwlrTourTimer = null;
 
-function dwlrSpeak(text) {
-  if (!window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.rate = 0.93;
-  utter.pitch = 1.0;
-  utter.volume = 1.0;
-  const voices = window.speechSynthesis.getVoices();
-  const preferred = voices.find(v =>
-    v.name.includes("Samantha") ||
-    v.name.includes("Karen") ||
-    v.name.includes("Google US English") ||
-    v.lang === "en-US"
-  );
-  if (preferred) utter.voice = preferred;
-  utter.onend = () => {
-    dwlrNarrating = false;
-    dwlrUpdateBtn();
-    // Auto-advance to next screen
-    if (dwlrAutoPlay) {
-      const screens = Object.keys(DWLR_NARRATION).map(Number).sort((a,b) => a-b);
-      const currentIdx = screens.indexOf(dwlrCurrentScreen);
-      if (currentIdx >= 0 && currentIdx < screens.length - 1) {
-        const nextScreen = screens[currentIdx + 1];
-        setTimeout(() => {
-          if (dwlrAutoPlay && typeof window.goTo === "function") {
-            window.goTo(nextScreen);
-          }
-        }, 800);
-      } else {
-        // Tour complete
-        dwlrAutoPlay = false;
-        dwlrUpdateBtn();
-      }
-    }
-  };
-  window.speechSynthesis.speak(utter);
-  dwlrNarrating = true;
-  dwlrUpdateBtn();
-}
-
-function dwlrStop() {
-  if (window.speechSynthesis) window.speechSynthesis.cancel();
-  dwlrNarrating = false;
-  dwlrUpdateBtn();
+function dwlrClearTimer() {
+  if (dwlrTourTimer) { clearTimeout(dwlrTourTimer); dwlrTourTimer = null; }
 }
 
 function dwlrUpdateBtn() {
   const btn = document.getElementById("dwlr-narration-btn");
   if (!btn) return;
-  if (dwlrNarrating) {
-    btn.textContent = "⏸  Stop Tour";
-    btn.style.background = "#7b6ff0";
-    btn.style.color = "#fff";
-  } else if (dwlrAutoPlay) {
-    btn.textContent = "⏸  Stop Tour";
+  if (dwlrTourActive) {
+    btn.textContent = "⏹ Stop Tour";
     btn.style.background = "#7b6ff0";
     btn.style.color = "#fff";
   } else {
-    btn.textContent = "▶  Start Guided Tour";
+    btn.textContent = "▶ Start Guided Tour";
     btn.style.background = "rgba(255,255,255,0.08)";
     btn.style.color = "rgba(255,255,255,0.7)";
   }
 }
 
-function dwlrNarrateScreen(n) {
-  dwlrCurrentScreen = n;
-  if (dwlrAutoPlay && DWLR_NARRATION[n]) {
-    dwlrSpeak(DWLR_NARRATION[n]);
-  }
-}
-
-function dwlrToggleNarration() {
-  if (dwlrNarrating || dwlrAutoPlay) {
-    dwlrAutoPlay = false;
-    dwlrStop();
-  } else {
-    // Always start tour from screen 0
-    dwlrAutoPlay = true;
-    dwlrCurrentScreen = 0;
-    if (typeof window.goTo === "function") window.goTo(0);
-    setTimeout(() => dwlrSpeak(DWLR_NARRATION[0]), 300);
-  }
+function dwlrStopTour() {
+  dwlrTourActive = false;
+  dwlrClearTimer();
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
   dwlrUpdateBtn();
 }
 
-// Inject narration button into header once DOM is ready
+function dwlrRunStep(index) {
+  if (!dwlrTourActive) return;
+  if (index >= DWLR_NARRATION.length) {
+    dwlrStopTour();
+    return;
+  }
+
+  dwlrTourIndex = index;
+  const step = DWLR_NARRATION[index];
+
+  // Navigate to screen
+  if (typeof window.goTo === "function") window.goTo(step.screen);
+
+  // Speak the narration
+  if (window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(step.text);
+    utter.rate = 0.92;
+    utter.pitch = 1.0;
+    utter.volume = 1.0;
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find(v =>
+      v.name.includes("Samantha") ||
+      v.name.includes("Google US English") ||
+      v.name.includes("Karen") ||
+      v.lang === "en-US"
+    );
+    if (preferred) utter.voice = preferred;
+    window.speechSynthesis.speak(utter);
+  }
+
+  // Timer-based advance (more reliable than onend in Chrome)
+  // ~160ms per word at rate 0.92
+  const wordCount = step.text.split(" ").length;
+  const duration = (wordCount / 0.92) * 160 + 1200; // +1200ms buffer between screens
+
+  dwlrTourTimer = setTimeout(() => {
+    if (dwlrTourActive) dwlrRunStep(index + 1);
+  }, duration);
+}
+
+function dwlrToggleNarration() {
+  if (dwlrTourActive) {
+    dwlrStopTour();
+  } else {
+    dwlrTourActive = true;
+    dwlrUpdateBtn();
+    // Small delay to let voices load
+    setTimeout(() => dwlrRunStep(0), 300);
+  }
+}
+
 document.addEventListener("DOMContentLoaded", function() {
-  // Load voices
   if (window.speechSynthesis) {
     window.speechSynthesis.getVoices();
     window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
   }
 
-  // Find header to inject button
   const header = document.querySelector("header") ||
                  document.querySelector(".header") ||
                  document.querySelector("[class*='header']");
 
   const btn = document.createElement("button");
   btn.id = "dwlr-narration-btn";
-  btn.textContent = "▶  Play Narration";
+  btn.textContent = "▶ Start Guided Tour";
   btn.onclick = dwlrToggleNarration;
-  btn.style.cssText = `
-    padding: 7px 16px;
-    border-radius: 20px;
-    border: none;
-    background: rgba(255,255,255,0.08);
-    color: rgba(255,255,255,0.7);
-    font-size: 12px;
-    font-weight: 600;
-    font-family: inherit;
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
-  `;
+  btn.style.cssText = [
+    "padding: 7px 16px",
+    "border-radius: 20px",
+    "border: none",
+    "background: rgba(255,255,255,0.08)",
+    "color: rgba(255,255,255,0.7)",
+    "font-size: 12px",
+    "font-weight: 600",
+    "font-family: inherit",
+    "cursor: pointer",
+    "transition: all 0.2s",
+    "white-space: nowrap",
+  ].join(";");
 
   if (header) {
     header.appendChild(btn);
   } else {
-    // Fallback: fixed position button
-    btn.style.cssText += `
-      position: fixed;
-      top: 16px;
-      right: 16px;
-      z-index: 9999;
-    `;
+    btn.style.cssText += ";position:fixed;top:16px;right:16px;z-index:9999";
     document.body.appendChild(btn);
-  }
-
-  // Hook into existing goTo / navigation function
-  // Intercept screen changes by watching the existing goTo function
-  const originalGoTo = window.goTo;
-  if (typeof originalGoTo === "function") {
-    window.goTo = function(n) {
-      originalGoTo(n);
-      dwlrNarrateScreen(n);
-    };
-  } else {
-    // Poll for goTo if not yet defined
-    let attempts = 0;
-    const poll = setInterval(() => {
-      attempts++;
-      if (typeof window.goTo === "function") {
-        const orig = window.goTo;
-        window.goTo = function(n) {
-          orig(n);
-          dwlrNarrateScreen(n);
-        };
-        clearInterval(poll);
-      }
-      if (attempts > 50) clearInterval(poll);
-    }, 100);
   }
 });
 </script>
